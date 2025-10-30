@@ -137,3 +137,9 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# my sandbox / testing file that not needed in the repo
+test.js
+
+# auth folder that not needed in the repo
+auth/
