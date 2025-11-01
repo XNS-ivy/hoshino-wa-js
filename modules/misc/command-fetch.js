@@ -11,6 +11,7 @@ export default class CommandFetch {
     constructor() {
         this.commands = new Map()
         this.commandData = new Map()
+        this.commandQueue = []
     }
 
     async init() {
@@ -34,14 +35,39 @@ export default class CommandFetch {
         }
     }
 
-    async fetchCommand(messagetext, { remoteJid, pushName, lid }) {
+    async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, key }) {
         const command = messagetext.split(" ")[0]
         const args = messagetext.split(" ").slice(1)
-        this.saveCommandToDatabase({ lid, command, args, remoteJid, pushName })
+        if (!this.commandData.has(command)) return null
+        this.saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, key })
     }
 
     async saveCommandToDatabase(commands) {
-        console.log(commands)
+        const newCommand = {
+            commandID: Date.now(),
+            remoteJid: commands.remoteJid,
+            replyExpiration: commands.expiration,
+            name: commands.command,
+            args: commands.args,
+            status: 'pending',
+            keyQuoted: commands.key,
+        }
+        let dbCommands = []
+        if (fs.existsSync(databasePath)) {
+            const rawData = fs.readFileSync(databasePath)
+            dbCommands = JSON.parse(rawData)
+        }
+        const userIndex = dbCommands.findIndex(entry => entry.lid === commands.lid)
+
+        if (userIndex !== -1) {
+            dbCommands[userIndex].commands.push(newCommand)
+        } else {
+            dbCommands.push({
+                lid: commands.lid,
+                pushName: commands.pushName,
+                commands: [newCommand],
+            })
+        }
+        fs.writeFileSync(databasePath, JSON.stringify(dbCommands, null, 2))
     }
 }
-

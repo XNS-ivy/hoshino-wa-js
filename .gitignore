@@ -143,3 +143,6 @@ test.js
 
 # auth folder that not needed in the repo
 auth/
+
+# ignoring file after first push
+databases/dbcommands.json
