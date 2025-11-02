@@ -4,8 +4,11 @@ export default class MessageHandler {
         'senderKeyDistributionMessage',
         'messageContextInfo'
     ]
-    constructor() {}
+    constructor(sock) {
+        this.sock = sock
+    }
     async messageFetch(rawMessage) {
+        if (!rawMessage.message) return null
         const { remoteJid } = rawMessage.key
         const { pushName, message, key } = rawMessage
 

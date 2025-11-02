@@ -2,7 +2,7 @@ import { makeWASocket, useMultiFileAuthState } from "baileys"
 import pino from 'pino'
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
-import MessageHandler from "./message-fetch"
+import MessageHandler from "./message-control"
 import CommandFetch from '@misc/command-fetch'
 import { BotConfigs } from '@misc/config-loader'
 
@@ -12,8 +12,6 @@ export default class Socket {
         this.saveCreds = null
         this.ConnectionControl = null
         this.messageHandler = null
-        this.botConfigs = new BotConfigs()
-        this.commandFetch = new CommandFetch()
     }
 
     async init() {
@@ -21,8 +19,11 @@ export default class Socket {
         this.sock = sock
         this.saveCreds = saveCreds
         this.ConnectionControl = new ConnectionControl(this)
-        this.messageHandler = new MessageHandler()
+        this.botConfigs = new BotConfigs()
+        this.messageHandler = new MessageHandler(sock)
+        this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
+        this.startCommandLoop()
         await this.socketEvent()
     }
 
@@ -75,6 +76,21 @@ export default class Socket {
             await this.init()
         } catch (err) {
             console.error('Restart failed:', err)
+        }
+    }
+    async startCommandLoop() {
+        while (true) {
+            const result = await this.commandFetch.executeCommand()
+            if (result) {
+                const { info, output } = result
+                const { outputType, text, media } = output
+                const { remoteJid, replyExpiration, keyQuoted } = info
+                if (outputType === 'text') {
+                    await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
+                    continue
+                }
+            }
+            await new Promise(r => setTimeout(r, 5000))
         }
     }
 }

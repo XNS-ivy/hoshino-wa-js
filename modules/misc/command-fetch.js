@@ -33,13 +33,14 @@ export default class CommandFetch {
                 this.commandData.set(command.name, command)
             }
         }
+        console.log(`Loaded ${this.commandData.size} commands.`)
     }
 
-    async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, key }) {
+    async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, rawMessage }) {
         const command = messagetext.split(" ")[0]
         const args = messagetext.split(" ").slice(1)
         if (!this.commandData.has(command)) return null
-        this.saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, key })
+        this.saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, rawMessage })
     }
 
     async saveCommandToDatabase(commands) {
@@ -50,7 +51,7 @@ export default class CommandFetch {
             name: commands.command,
             args: commands.args,
             status: 'pending',
-            keyQuoted: commands.key,
+            keyQuoted: commands.rawMessage,
         }
         let dbCommands = []
         if (fs.existsSync(databasePath)) {
@@ -66,8 +67,95 @@ export default class CommandFetch {
                 lid: commands.lid,
                 pushName: commands.pushName,
                 commands: [newCommand],
+                userExpired: Date.now() + 7 * 24 * 60 * 60 * 1000,
             })
         }
         fs.writeFileSync(databasePath, JSON.stringify(dbCommands, null, 2))
+    }
+    async updateCommandStatus(commandID, status) {
+        const rawData = fs.readFileSync(databasePath)
+        const dbCommands = JSON.parse(rawData)
+        let found = false
+
+        for (const entry of dbCommands) {
+            for (const cmd of entry.commands) {
+                if (cmd.commandID == commandID) {
+                    cmd.status = status
+                    found = true
+                    break
+                }
+            }
+            if (found) break
+        }
+
+        fs.writeFileSync(databasePath, JSON.stringify(dbCommands, null, 2))
+    }
+
+    async checkCommand() {
+        if (!fs.existsSync(databasePath)) return
+
+        const rawData = fs.readFileSync(databasePath)
+        const dbCommands = JSON.parse(rawData)
+        let modified = false
+        const now = Date.now()
+
+        const filteredDb = dbCommands
+            .map(entry => {
+                if (entry.userExpired && entry.userExpired < now) {
+                    console.log(`⏰ User ${entry.lid} expired and removed.`)
+                    modified = true
+                    return null
+                }
+                const activeCommands = []
+                for (const command of entry.commands) {
+                    if (command.status === 'pending') {
+                        if (!this.commandQueue.includes(command.commandID)) {
+                            this.commandQueue.push(command.commandID)
+                        }
+                        activeCommands.push(command)
+                    } else {
+                        modified = true
+                    }
+                }
+
+                entry.commands = activeCommands
+                return entry.commands.length > 0 ? entry : null
+            })
+            .filter(Boolean)
+
+        if (modified) {
+            fs.writeFileSync(databasePath, JSON.stringify(filteredDb, null, 2))
+        }
+    }
+
+
+
+    async executeCommand() {
+        await this.checkCommand()
+
+        while (this.commandQueue.length > 0) {
+            const commandID = this.commandQueue.shift()
+
+            const rawData = fs.readFileSync(databasePath)
+            const dbCommands = JSON.parse(rawData)
+            const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
+            const commandToExecute = entry?.commands.find(cmd => cmd.commandID === commandID)
+            if (!commandToExecute) continue
+
+            const commandData = this.commandData.get(commandToExecute.name)
+            if (commandData) {
+                try {
+                    const output = await commandData.execute(commandToExecute)
+                    if (output) {
+                        await this.updateCommandStatus(commandToExecute.commandID, 'completed')
+                        return { info: commandToExecute, output }
+                    }
+                } catch (err) {
+                    console.error('Error executing command:', err)
+                    await this.updateCommandStatus(commandToExecute.commandID, 'failed')
+                    return { info: commandToExecute, output: { text: 'Error executing command.', outputType: 'text' } }
+                }
+            }
+        }
     }
 }
