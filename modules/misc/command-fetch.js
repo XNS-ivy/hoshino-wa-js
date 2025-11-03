@@ -33,7 +33,6 @@ export default class CommandFetch {
                 this.commandData.set(command.name, command)
             }
         }
-        console.log(`Loaded ${this.commandData.size} commands.`)
     }
 
     async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, rawMessage }) {
@@ -135,7 +134,6 @@ export default class CommandFetch {
 
         while (this.commandQueue.length > 0) {
             const commandID = this.commandQueue.shift()
-
             const rawData = fs.readFileSync(databasePath)
             const dbCommands = JSON.parse(rawData)
             const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
@@ -145,7 +143,7 @@ export default class CommandFetch {
             const commandData = this.commandData.get(commandToExecute.name)
             if (commandData) {
                 try {
-                    const output = await commandData.execute(commandToExecute)
+                    const output = await commandData.execute(commandToExecute, this.commandData)
                     if (output) {
                         await this.updateCommandStatus(commandToExecute.commandID, 'completed')
                         return { info: commandToExecute, output }

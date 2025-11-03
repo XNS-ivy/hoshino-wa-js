@@ -23,8 +23,8 @@ export default class Socket {
         this.messageHandler = new MessageHandler(sock)
         this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
-        this.startCommandLoop()
         await this.socketEvent()
+        this.startCommandLoop()
     }
 
     async socketConfig() {
@@ -79,18 +79,24 @@ export default class Socket {
         }
     }
     async startCommandLoop() {
-        while (true) {
-            const result = await this.commandFetch.executeCommand()
-            if (result) {
-                const { info, output } = result
-                const { outputType, text, media } = output
-                const { remoteJid, replyExpiration, keyQuoted } = info
-                if (outputType === 'text') {
-                    await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
-                    continue
+        try {
+            while (true) {
+                const result = await this.commandFetch.executeCommand()
+                if (result) {
+                    const { info, output } = result
+                    const { outputType, text, media } = output
+                    const { remoteJid, replyExpiration, keyQuoted } = info
+                    if (outputType === 'text') {
+                        await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
+                        continue
+                    }
                 }
+                await new Promise(r => setTimeout(r, 5000))
             }
-            await new Promise(r => setTimeout(r, 5000))
+        } catch (err) {
+            console.error('Error in command loop:', err)
         }
+    } catch(err) {
+        console.error('Error in command loop:', err)
     }
 }

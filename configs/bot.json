@@ -1,3 +1,4 @@
 {
-    "prefix": "."
+    "prefix": ".",
+    "disabledCommands": ["exampleCommand1", "exampleCommand2"]
 }
