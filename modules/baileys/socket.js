@@ -1,4 +1,5 @@
-import { makeWASocket, useMultiFileAuthState } from "baileys"
+import { makeWASocket } from "baileys"
+import { useSingleFileAuthState } from "./auth-state"
 import pino from 'pino'
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
@@ -28,32 +29,31 @@ export default class Socket {
     }
 
     async socketConfig() {
-        const { state, saveCreds } = await useMultiFileAuthState('./auth')
+        const { state, saveCreds } = await useSingleFileAuthState('./auth')
         const sock = makeWASocket({
             auth: state,
-            logger: pino({ level: "silent" })
+            logger: pino({ level: "silent" }),
+            printQRInTerminal: false,
         })
         return { sock, saveCreds }
     }
 
     async socketEvent() {
-        const sock = this.sock
-        const connectionControl = this.ConnectionControl
-        sock.ev.on('creds.update', this.saveCreds)
-        sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
+        this.sock.ev.on('creds.update', this.saveCreds)
+        this.sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
             try {
                 if (qr) console.log(await QRCode.toString(qr, { type: 'terminal', small: true, scale: 1 }))
-                connectionControl.onConnectionUpdate(connection)
+                this.ConnectionControl.onConnectionUpdate(connection)
 
                 if (connection === 'close') {
-                    await connectionControl.onConnectionClose(lastDisconnect)
+                    await this.ConnectionControl.onConnectionClose(lastDisconnect)
                 }
             } catch (err) {
                 console.error('Error handling connection update:', err)
             }
         })
 
-        sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
             if (type !== 'notify') return
 
             for (const msg of messages) {
@@ -84,7 +84,7 @@ export default class Socket {
                 const result = await this.commandFetch.executeCommand()
                 if (result) {
                     const { info, output } = result
-                    const { outputType, text, media } = output
+                    const { outputType, text, mediaUrl } = output
                     const { remoteJid, replyExpiration, keyQuoted } = info
                     if (outputType === 'text') {
                         await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })

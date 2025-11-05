@@ -3,7 +3,7 @@ import { botConfigs } from "@misc/config-loader"
 export default {
     name: 'prefix-change',
     desc: '',
-    accsess: 'owner',
+    access: 'owner',
     execute: async ({ args, pushName }) => {
         if (!args) return { text: 'Please provide new prefix' , outputType: 'text'}
         else {
