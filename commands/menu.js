@@ -1,13 +1,15 @@
+import { botConfigs } from '@misc/config-loader'
 export default {
     name: 'menu',
-    description: 'Display the list of available commands.',
-    execute: async ({}, commandData) => {
+    desc: 'Display the list of available commands.',
+    accsess: 'all',
+    execute: async ({ }, commandData) => {
+        const prefix = await botConfigs.getConfig('prefix')
         const commandList = Array.from(commandData.values())
-            .map(cmd => `• ${cmd.name} — ${cmd.description || 'No description'}`)
+            .map(cmd => `${prefix}${cmd.name} — ${cmd.desc || 'No description'}`)
             .join('\n')
 
         const menuText = `📜 *Command Menu*\n\n${commandList}`
-
         return {
             text: menuText,
             outputType: 'text',

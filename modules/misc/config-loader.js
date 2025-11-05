@@ -15,7 +15,7 @@ export class Configs {
 export class BotConfigs extends Configs {
     constructor() {
         super()
-        this.init()
+        this.ready = this.init()
     }
 
     async init() {
@@ -28,30 +28,25 @@ export class BotConfigs extends Configs {
     }
 
     async loadCustomConfigs() {
-        console.log("Loading custom configurations...")
-        const isExist = fs.existsSync(botConfigPath)
-        const parsing = JSON.parse(fs.readFileSync(botConfigPath, "utf8"))
-        for (const [key, val] of Object.entries(parsing)) {
+        if (!fs.existsSync(botConfigPath)) return
+        const json = JSON.parse(fs.readFileSync(botConfigPath, "utf8"))
+        for (const [key, val] of Object.entries(json)) {
             this.configs.set(key, val)
         }
-        if (isExist) {
-            const json = JSON.parse(fs.readFileSync(botConfigPath, "utf8"))
-            for (const [key, val] of Object.entries(json)) {
-                this.configs.set(key, val)
-            }
-        }
     }
-    getConfig(key) {
+
+    async getConfig(key) {
+        await this.ready
         return this.configs.get(key)
     }
+
     async changeConfigToDatabase(key, val) {
         this.configs.set(key, val)
-        const obj = {}
-        for (const [k, v] of this.configs) {
-            obj[k] = v
-        }
+        const obj = Object.fromEntries(this.configs)
         fs.writeFileSync(botConfigPath, JSON.stringify(obj, null, 4), "utf8")
-        this.loadCustomConfigs()
+        new Promise(resolve => setTimeout(resolve, 100))
+        await this.init()
     }
-    
 }
+
+export const botConfigs = new BotConfigs()

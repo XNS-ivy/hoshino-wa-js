@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
 import MessageHandler from "./message-control"
 import CommandFetch from '@misc/command-fetch'
-import { BotConfigs } from '@misc/config-loader'
+import { botConfigs } from "@misc/config-loader"
 
 export default class Socket {
     constructor() {
@@ -19,7 +19,7 @@ export default class Socket {
         this.sock = sock
         this.saveCreds = saveCreds
         this.ConnectionControl = new ConnectionControl(this)
-        this.botConfigs = new BotConfigs()
+        this.botConfigs = botConfigs
         this.messageHandler = new MessageHandler(sock)
         this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
@@ -60,9 +60,9 @@ export default class Socket {
                 if (!msg.pushName || msg.key.remoteJid === 'status@broadcast') continue
                 const parsed = await this.messageHandler.messageFetch(msg)
                 if (parsed) {
-                    if (!parsed.text.startsWith(this.botConfigs.getConfig('prefix'))) continue
+                    if (!parsed.text.startsWith(await botConfigs.getConfig('prefix'))) continue
                     this.commandFetch.fetchCommand(
-                        parsed.text.split(this.botConfigs.getConfig('prefix'))[1],
+                        parsed.text.split(await botConfigs.getConfig('prefix'))[1],
                         parsed
                     )
                 }
