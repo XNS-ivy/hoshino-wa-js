@@ -4,4 +4,4 @@ import Socket from "@baileys/socket"
 const bot = new Socket()
 
 await botConfigs.ready
-await bot.init()
+await bot.init('auth')

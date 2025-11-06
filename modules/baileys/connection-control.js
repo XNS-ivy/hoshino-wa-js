@@ -1,9 +1,11 @@
 import { DisconnectReason } from 'baileys'
+import fs from 'fs'
+import readline from 'readline'
 
 class ConnectionControl {
     constructor(socketInstance) {
         this.socket = socketInstance
-        this.reconnectDelay = 5000 // 5 detik
+        this.reconnectDelay = 5000
         this.maxRetry = 5
         this.retryCount = 0
     }
@@ -13,42 +15,62 @@ class ConnectionControl {
         console.log('Connection update:', connection)
     }
 
-    async onConnectionClose(lastDisconnect) {
+    async onConnectionClose(lastDisconnect, authPath) {
         if (!lastDisconnect) return
 
         const code = lastDisconnect.error?.statusCode || lastDisconnect.error?.output?.statusCode
+        console.log(`Connection closed with code ${code}`)
 
-        if (code === DisconnectReason.loggedOut) {
-            console.log('Logged out permanently, please delete auth file and scan QR again.')
-            return
-        }
+        switch (code) {
+            case DisconnectReason.loggedOut:
+            case DisconnectReason.badSession:
+            case DisconnectReason.multideviceMismatch:
+            case DisconnectReason.connectionReplaced:
+                console.log('Session invalid. Deleting auth...')
+                try {
+                    await fs.promises.rm(authPath, { recursive: true, force: true })
+                    console.log('Auth deleted. Please rescan QR.')
+                    await this.askToReconnect('Scan QR Again? [y/n]')
+                } catch (err) {
+                    console.error('Failed to delete auth:', err)
+                }
+                break
 
-        if (
-            code === DisconnectReason.restartRequired ||
-            code === DisconnectReason.connectionLost ||
-            code === 515
-        ) {
-            if (this.retryCount >= this.maxRetry) {
-                console.log('Max reconnect attempts reached. Exiting...')
+            case DisconnectReason.connectionLost:
+            case DisconnectReason.restartRequired:
+            case DisconnectReason.connectionClosed:
+            case 515:
+                console.log('Attempting reconnect...')
+                setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
+                break
+            case DisconnectReason.forbidden:
+            case DisconnectReason.unavailableService:
+                console.log(`Connection Forbidden or unvailable service, Exiting...`)
                 process.exit(1)
-            }
-
-            console.log(`Connection closed with code ${code}. Reconnecting in ${this.reconnectDelay/1000}s...`)
-            this.retryCount++
-            setTimeout(async () => {
-                await this.socket.restartSocket()
-            }, this.reconnectDelay)
-            return
+            default:
+                console.log('Unknown disconnect. Reconnecting...')
+                setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
         }
-
-        console.log('Unknown disconnect, reconnecting...')
-        setTimeout(async () => {
-            await this.socket.restartSocket()
-        }, this.reconnectDelay)
     }
 
-    resetRetryCount() {
-        this.retryCount = 0
+    async askToReconnect(question = '') {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        })
+        return new Promise(resolve => {
+            rl.question(`${question}: `, async answer => {
+                rl.close()
+                if (answer.toLowerCase() === 'y') {
+                    this.retryCount = 0
+                    await this.socket.restartSocket()
+                } else {
+                    console.log('Exiting...')
+                    process.exit(0)
+                }
+                resolve()
+            })
+        })
     }
 }
 

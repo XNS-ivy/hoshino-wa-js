@@ -1,5 +1,5 @@
 import { makeWASocket } from "baileys"
-import { useSingleFileAuthState } from "./auth-state"
+import { SingleFileAuth } from "./auth-state"
 import pino from 'pino'
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
@@ -13,9 +13,12 @@ export default class Socket {
         this.saveCreds = null
         this.ConnectionControl = null
         this.messageHandler = null
+        this.authFolderName = null
     }
 
-    async init() {
+    async init(authenticationFolderName = 'auth') {
+        this.authFolderName = authenticationFolderName
+        this.auth = new SingleFileAuth(this.authFolderName)
         const { sock, saveCreds } = await this.socketConfig()
         this.sock = sock
         this.saveCreds = saveCreds
@@ -29,7 +32,7 @@ export default class Socket {
     }
 
     async socketConfig() {
-        const { state, saveCreds } = await useSingleFileAuthState('./auth')
+        const { state, saveCreds } = this.auth
         const sock = makeWASocket({
             auth: state,
             logger: pino({ level: "silent" }),
@@ -46,7 +49,7 @@ export default class Socket {
                 this.ConnectionControl.onConnectionUpdate(connection)
 
                 if (connection === 'close') {
-                    await this.ConnectionControl.onConnectionClose(lastDisconnect)
+                    await this.ConnectionControl.onConnectionClose(lastDisconnect, this.authFolderName)
                 }
             } catch (err) {
                 console.error('Error handling connection update:', err)
