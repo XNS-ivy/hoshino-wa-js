@@ -1,5 +1,6 @@
 {
     "prefix": ".",
+    "owners": [],
     "debug": false,
     "disabledCommands": [
         "exampleCommand1",

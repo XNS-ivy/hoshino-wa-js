@@ -15,6 +15,7 @@ export default class Socket {
         this.ConnectionControl = null
         this.messageHandler = null
         this.authFolderName = null
+        this.setlocalowner = null
     }
 
     async init(authenticationFolderName = 'auth') {
@@ -56,6 +57,17 @@ export default class Socket {
                 if (connection === 'close') {
                     await this.ConnectionControl.onConnectionClose(lastDisconnect, this.authFolderName)
                 }
+                if (connection === 'open') {
+                    this.setlocalowner = Number(this.sock.user.lid.split(':')[0])
+                    const ownerData = {
+                        lid: this.setlocalowner,
+                        name: this.sock.user.name || "Unnamed Owner",
+                        contact: this.sock.user.id?.replace(/:[0-9]+/g, "") || ""
+                    }
+                    await this.botConfigs.addLocalOwner(ownerData)
+                    console.log(`setting local owner: ${this.setlocalowner}\nname local owner : ${this.sock.user.name}`)
+                }
+
             } catch (err) {
                 console.error('Error handling connection update:', err)
             }

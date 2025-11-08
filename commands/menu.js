@@ -4,6 +4,7 @@ export default {
     name: 'menu',
     desc: 'Display the list of available commands.',
     access: 'all',
+    usage: ['menu', 'menu <access-category>'],
     execute: async ({ args }, commandData) => {
         const prefix = await botConfigs.getConfig('prefix')
         const accessOrder = ['owner', 'admin', 'premium', 'all']

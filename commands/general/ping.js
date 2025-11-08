@@ -2,6 +2,7 @@ export default {
     name: "ping",
     description: "Check the bot's latency.",
     access: 'all',
+    uage: 'ping',
     execute: async ({ commandID }) => {
         const latency = (Date.now() - commandID - 4000) > 0 ? (Date.now() - commandID - 4000) :
             (Date.now() - commandID - 3000) > 0 ? (Date.now() - commandID - 3000) :
