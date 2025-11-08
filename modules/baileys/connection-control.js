@@ -45,8 +45,9 @@ class ConnectionControl {
                 break
             case DisconnectReason.forbidden:
             case DisconnectReason.unavailableService:
-                console.log(`Connection Forbidden or unvailable service, Exiting...`)
-                process.exit(1)
+                console.log(`Connection Forbidden or unvailable service, Reconnect...`)
+                setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
+                break
             default:
                 console.log('Unknown disconnect. Reconnecting...')
                 setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)

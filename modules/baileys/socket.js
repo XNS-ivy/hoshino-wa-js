@@ -1,11 +1,12 @@
 import { makeWASocket } from "baileys"
 import { SingleFileAuth } from "./auth-state"
-import pino from 'pino'
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
 import MessageHandler from "./message-control"
 import CommandFetch from '@misc/command-fetch'
 import { botConfigs } from "@misc/config-loader"
+import NodeCache from "node-cache"
+import { createFilteredLogger } from './functions/filter-logger'
 
 export default class Socket {
     constructor() {
@@ -33,10 +34,14 @@ export default class Socket {
 
     async socketConfig() {
         const { state, saveCreds } = this.auth
+        const filteredLogger = createFilteredLogger('silent')
+        this.groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false })
         const sock = makeWASocket({
             auth: state,
-            logger: pino({ level: "silent" }),
+            logger: filteredLogger,
             printQRInTerminal: false,
+            markOnlineOnConnect: false,
+            cachedGroupMetadata: async (jid) => this.groupCache.get(jid)
         })
         return { sock, saveCreds }
     }
@@ -69,6 +74,22 @@ export default class Socket {
                         parsed
                     )
                 }
+            }
+        })
+        this.sock.ev.on('groups.update', async ([event]) => {
+            try {
+                const metadata = await this.sock.groupMetadata(event.id)
+                this.groupCache.set(event.id, metadata)
+            } catch (e) {
+                console.error('Error updating group cache:', e)
+            }
+        })
+        this.sock.ev.on('group-participants.update', async (event) => {
+            try {
+                const metadata = await this.sock.groupMetadata(event.id)
+                this.groupCache.set(event.id, metadata)
+            } catch (e) {
+                console.error('Error updating participant cache:', e)
             }
         })
     }
