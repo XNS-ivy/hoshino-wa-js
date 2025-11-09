@@ -1,5 +1,5 @@
 import { makeWASocket } from "baileys"
-import { SingleFileAuth } from "./auth-state"
+import { ImprovedAuthWithCache } from "./auth-state"
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
 import MessageHandler from "./message-control"
@@ -20,7 +20,7 @@ export default class Socket {
 
     async init(authenticationFolderName = 'auth') {
         this.authFolderName = authenticationFolderName
-        this.auth = new SingleFileAuth(this.authFolderName)
+        this.auth = new ImprovedAuthWithCache(this.authFolderName)
         const { sock, saveCreds } = await this.socketConfig()
         this.sock = sock
         this.saveCreds = saveCreds

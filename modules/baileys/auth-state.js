@@ -1,66 +1,74 @@
 import fs from 'fs'
 import path from 'path'
+import NodeCache from 'node-cache'
 import { initAuthCreds, BufferJSON } from 'baileys'
 
-export class SingleFileAuth {
-  constructor(authDir = './auth') {
-    this.authDir = authDir
-    this.authFile = path.join(authDir, 'creds.json')
+export class ImprovedAuthWithCache {
+  constructor(baseDir = './auth') {
+    this.baseDir = baseDir
+    this.credsPath = path.join(baseDir, 'creds.json')
+    this.keysDir = path.join(baseDir, 'keys')
+    fs.mkdirSync(this.keysDir, { recursive: true })
 
-    if (!fs.existsSync(this.authDir)) {
-      fs.mkdirSync(this.authDir, { recursive: true })
-    }
-    this.data = this.#loadData()
-    this.creds = this.data.creds || initAuthCreds()
-    this.keysStore = this.data.keys || {}
+    this.cache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
+    this.creds = this.#loadJSON(this.credsPath) || initAuthCreds()
   }
-  #loadData() {
+
+  #loadJSON(file) {
     try {
-      if (fs.existsSync(this.authFile)) {
-        const raw = fs.readFileSync(this.authFile, 'utf-8')
-        return JSON.parse(raw, BufferJSON.reviver)
+      if (fs.existsSync(file)) {
+        return JSON.parse(fs.readFileSync(file, 'utf-8'), BufferJSON.reviver)
       }
-    } catch (err) {
-      console.error('❌ [Auth] Failed to load creds.json:', err)
+    } catch (e) {
+      console.error('⚠️ [Auth] Failed To Read', file, e)
     }
-    return {}
+    return null
   }
-  save() {
-    try {
-      fs.writeFileSync(
-        this.authFile,
-        JSON.stringify({ creds: this.creds, keys: this.keysStore }, BufferJSON.replacer, 2)
-      )
-    } catch (err) {
-      console.error('❌ [Auth] Failed to save creds.json:', err)
-    }
+
+  #saveJSON(file, data) {
+    const tmp = file + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(data, BufferJSON.replacer, 2))
+    fs.renameSync(tmp, file)
   }
-  get keys() {
-    return {
-      get: async (type, ids) => {
-        return Object.fromEntries(
-          ids
-            .map(id => [id, this.keysStore?.[type]?.[id]])
-            .filter(([, v]) => v)
-        )
-      },
-      set: async (updates) => {
-        for (const type in updates) {
-          this.keysStore[type] = this.keysStore[type] || {}
-          Object.assign(this.keysStore[type], updates[type])
+
+  saveCreds = () => this.#saveJSON(this.credsPath, this.creds)
+
+  keys = {
+    get: async (type, ids) => {
+      const result = {}
+      for (const id of ids) {
+        const key = `${type}-${id}`
+        let value = this.cache.get(key)
+        if (!value) {
+          const keyPath = path.join(this.keysDir, `${key}.json`)
+          if (fs.existsSync(keyPath)) {
+            value = this.#loadJSON(keyPath)
+            this.cache.set(key, value)
+          }
         }
-        this.save()
+
+        if (value) result[id] = value
+      }
+      return result
+    },
+
+    set: async (data) => {
+      for (const type in data) {
+        for (const id in data[type]) {
+          const key = `${type}-${id}`
+          const keyPath = path.join(this.keysDir, `${key}.json`)
+          const value = data[type][id]
+          this.cache.set(key, value)
+          clearTimeout(this[`_save_${key}`])
+          this[`_save_${key}`] = setTimeout(() => {
+            this.#saveJSON(keyPath, value)
+          }, 300)
+        }
       }
     }
   }
-  get state() {
-    return {
-      creds: this.creds,
-      keys: this.keys
-    }
-  }
 
-  get saveCreds() {
-    return this.save.bind(this)
+  get state() {
+    return { creds: this.creds, keys: this.keys }
   }
 }
