@@ -26,7 +26,7 @@ export default class CommandFetch {
             const stat = fs.statSync(fullPath)
 
             if (stat.isDirectory()) {
-                await this.loadCommands(fullPath)
+                await this.#loadCommands(fullPath)
             } else if (file.endsWith('.js')) {
                 const commandModule = await import(fullPath)
                 const command = commandModule.default
