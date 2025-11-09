@@ -4,7 +4,7 @@ export default {
   name: "ping",
   description: "Check the bot's latency.",
   access: 'all',
-  usage: 'ping [host]',
+  usage: ['ping', 'ping <host>'],
   execute: async ({ args = [], commandID }) => {
     const target = args[0] ? args[0].replace(/^https?:\/\//, '') : 'google.com'
     const host = target.includes('.') ? target : `${target}.com`
