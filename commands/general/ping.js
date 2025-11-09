@@ -1,15 +1,26 @@
+import ping from 'ping'
+
 export default {
-    name: "ping",
-    description: "Check the bot's latency.",
-    access: 'all',
-    uage: 'ping',
-    execute: async ({ commandID }) => {
-        const latency = (Date.now() - commandID - 4000) > 0 ? (Date.now() - commandID - 4000) :
-            (Date.now() - commandID - 3000) > 0 ? (Date.now() - commandID - 3000) :
-                (Date.now() - commandID - 2000) > 0 ? (Date.now() - commandID - 2000) :
-                    (Date.now() - commandID - 1000) > 0 ? (Date.now() - commandID - 1000) :
-                        (Date.now() - commandID)
-        const roundedLatency = parseFloat(latency.toFixed(2))
-        return { text: `✅ Pong! Command Latency is ${roundedLatency}ms.`, outputType: 'text' }
+  name: "ping",
+  description: "Check the bot's latency.",
+  access: 'all',
+  usage: 'ping [host]',
+  execute: async ({ args = [], commandID }) => {
+    const target = args[0] ? args[0].replace(/^https?:\/\//, '') : 'google.com'
+    const host = target.includes('.') ? target : `${target}.com`
+    const now = Date.now()
+    const latency = now - commandID
+    const roundedLatency = parseFloat(latency.toFixed(2))
+    let networkLatency = null
+    try {
+      const res = await ping.promise.probe(host)
+      networkLatency = res.time ? `${res.time} ms` : 'Timeout'
+    } catch (err) {
+      networkLatency = 'Error'
     }
+    return {
+      text: `✅ Pong!\n📦 Command Latency: ${roundedLatency} ms\n🌐 Network Latency (${host}): ${networkLatency}`,
+      outputType: 'text'
+    }
+  }
 }
