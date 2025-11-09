@@ -12,7 +12,7 @@ class ConnectionControl {
 
     async onConnectionUpdate(connection) {
         if (!connection) return
-        console.log('Connection update:', connection)
+        console.log('Connection update : ', connection)
     }
 
     async onConnectionClose(lastDisconnect, authPath) {

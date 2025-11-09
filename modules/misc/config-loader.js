@@ -56,7 +56,7 @@ export class BotConfigs extends Configs {
             this.configs.set("owners", owners)
             const obj = Object.fromEntries(this.configs)
             fs.writeFileSync(botConfigPath, JSON.stringify(obj, null, 4), "utf8")
-            console.log(`✅ Added new owner: ${localOwner.name} (${localOwner.lid})`)
+            console.log(`✅ Added new owner : ${localOwner.name} (${localOwner.lid})`)
         } else {
             console.log(`ℹ️  Owner ${localOwner.name} (${localOwner.lid}) already exists.`)
         }

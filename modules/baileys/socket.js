@@ -36,7 +36,7 @@ export default class Socket {
     async socketConfig() {
         const { state, saveCreds } = this.auth
         const filteredLogger = createFilteredLogger('silent')
-        this.groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false })
+        this.groupCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 60, useClones: false })
         const sock = makeWASocket({
             auth: state,
             logger: filteredLogger,
@@ -65,7 +65,7 @@ export default class Socket {
                         contact: this.sock.user.id?.replace(/:[0-9]+/g, "") || ""
                     }
                     await this.botConfigs.addLocalOwner(ownerData)
-                    console.log(`setting local owner: ${this.setlocalowner}\nname local owner : ${this.sock.user.name}`)
+                    console.log(`✅ Setting local owner : ${this.setlocalowner}\n✅ Name local owner : ${this.sock.user.name}`)
                 }
 
             } catch (err) {
