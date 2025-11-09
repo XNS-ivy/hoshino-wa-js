@@ -3,6 +3,7 @@
     "owners": [],
     "debugMessage": false,
     "debugCommand": false,
+    "usePM2": true,
     "disabledCommands": [
         "exampleCommand1",
         "exampleCommand2"

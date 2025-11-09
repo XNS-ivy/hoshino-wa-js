@@ -1,4 +1,6 @@
 import { DisconnectReason } from 'baileys'
+import { botConfigs } from '@misc/config-loader'
+
 import fs from 'fs'
 import readline from 'readline'
 
@@ -26,13 +28,14 @@ class ConnectionControl {
             case DisconnectReason.badSession:
             case DisconnectReason.multideviceMismatch:
             case DisconnectReason.connectionReplaced:
-                console.log('Session invalid. Deleting auth...')
+                console.log('⛔ Session invalid. Deleting auth...')
                 try {
                     await fs.promises.rm(authPath, { recursive: true, force: true })
-                    console.log('Auth deleted. Please rescan QR.')
-                    await this.askToReconnect('Scan QR Again? [y/n]')
+                    console.log('✅ Auth deleted. Please rescan QR.')
+                    if (await botConfigs.getConfig('usePM2') == false) await this.askToReconnect('Scan QR Again? [y/n]')
+                    else setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
                 } catch (err) {
-                    console.error('Failed to delete auth:', err)
+                    console.error('❌ Failed to delete auth:', err)
                 }
                 break
 
@@ -40,16 +43,16 @@ class ConnectionControl {
             case DisconnectReason.restartRequired:
             case DisconnectReason.connectionClosed:
             case 515:
-                console.log('Attempting reconnect...')
+                console.log('🔄 Attempting reconnect...')
                 setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
                 break
             case DisconnectReason.forbidden:
             case DisconnectReason.unavailableService:
-                console.log(`Connection Forbidden or unvailable service, Reconnect...`)
+                console.log(`🚨 Connection Forbidden or unvailable service, Reconnect...`)
                 setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
                 break
             default:
-                console.log('Unknown disconnect. Reconnecting...')
+                console.log('⚠️ Unknown disconnect. Reconnecting...')
                 setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
         }
     }
@@ -66,7 +69,7 @@ class ConnectionControl {
                     this.retryCount = 0
                     await this.socket.restartSocket()
                 } else {
-                    console.log('Exiting...')
+                    console.log('⛔ Exiting...')
                     process.exit(0)
                 }
                 resolve()

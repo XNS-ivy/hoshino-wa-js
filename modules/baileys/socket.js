@@ -108,7 +108,7 @@ export default class Socket {
 
     async restartSocket() {
         try {
-            console.log('Restarting socket...')
+            console.log('🔄 Restarting socket...')
             await this.init()
         } catch (err) {
             console.error('Restart failed:', err)
