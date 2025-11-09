@@ -1,6 +1,7 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
+import { botConfigs } from './config-loader'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -45,8 +46,10 @@ export default class CommandFetch {
     async saveCommandToDatabase(commands) {
         const newCommand = {
             commandID: Date.now(),
+            lid: commands.lid,
             remoteJid: commands.remoteJid,
             replyExpiration: commands.expiration,
+            pushName: commands.pushName,
             name: commands.command,
             args: commands.args,
             status: 'pending',
@@ -144,6 +147,7 @@ export default class CommandFetch {
             if (commandData) {
                 try {
                     const output = await commandData.execute(commandToExecute, this.commandData)
+                    if (await botConfigs.getConfig('debugCommand') == true) console.log(commandToExecute)
                     if (output) {
                         await this.updateCommandStatus(commandToExecute.commandID, 'completed')
                         return { info: commandToExecute, output }

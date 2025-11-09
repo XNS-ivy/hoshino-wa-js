@@ -1,7 +1,8 @@
 {
     "prefix": ".",
     "owners": [],
-    "debug": false,
+    "debugMessage": false,
+    "debugCommand": false,
     "disabledCommands": [
         "exampleCommand1",
         "exampleCommand2"
