@@ -21,7 +21,7 @@ export default class Socket {
     async init(authenticationFolderName = 'auth') {
         this.authFolderName = authenticationFolderName
         this.auth = new ImprovedAuthWithCache(this.authFolderName)
-        const { sock, saveCreds } = await this.socketConfig()
+        const { sock, saveCreds } = await this.#socketConfig()
         this.sock = sock
         this.saveCreds = saveCreds
         this.ConnectionControl = new ConnectionControl(this)
@@ -29,11 +29,11 @@ export default class Socket {
         this.messageHandler = new MessageHandler(sock)
         this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
-        await this.socketEvent()
-        this.startCommandLoop()
+        await this.#socketEvent()
+        this.#startCommandLoop()
     }
 
-    async socketConfig() {
+    async #socketConfig() {
         const { state, saveCreds } = this.auth
         const filteredLogger = createFilteredLogger('silent')
         this.groupCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 60, useClones: false })
@@ -47,7 +47,7 @@ export default class Socket {
         return { sock, saveCreds }
     }
 
-    async socketEvent() {
+    async #socketEvent() {
         this.sock.ev.on('creds.update', this.saveCreds)
         this.sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
             try {
@@ -79,15 +79,13 @@ export default class Socket {
             for (const msg of messages) {
                 if (!msg.pushName || msg.key.remoteJid === 'status@broadcast') continue
                 const parsed = await this.messageHandler.messageFetch(msg)
-                if (parsed) {
-                    if (!parsed.text.startsWith(await botConfigs.getConfig('prefix'))) continue
-                    this.commandFetch.fetchCommand(
-                        parsed.text.split(await botConfigs.getConfig('prefix'))[1],
-                        parsed
-                    )
-                }
+                if (!parsed) continue
+                const prefix = await botConfigs.getConfig('prefix')
+                if (!parsed.text.startsWith(prefix)) continue
+                this.commandFetch.fetchCommand(parsed.text.slice(prefix.length).trim(), parsed)
             }
         })
+
         this.sock.ev.on('groups.update', async ([event]) => {
             try {
                 const metadata = await this.sock.groupMetadata(event.id)
@@ -114,13 +112,13 @@ export default class Socket {
             console.error('❌ Restart failed:', err)
         }
     }
-    async startCommandLoop() {
+    async #startCommandLoop() {
         try {
             while (true) {
                 const result = await this.commandFetch.executeCommand()
                 if (result) {
                     const { info, output } = result
-                    const { outputType, text, mediaUrl } = output
+                    const { outputType, text, mediaURL } = output
                     const { remoteJid, replyExpiration, keyQuoted } = info
                     if (outputType === 'text') {
                         await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
@@ -129,10 +127,8 @@ export default class Socket {
                 }
                 await new Promise(r => setTimeout(r, 5000))
             }
-        } catch (err) {
-            console.error('❌ Error in command loop:', err)
+        } catch (error) {
+            console.error('❌ Error in command loop')
         }
-    } catch(err) {
-        console.error('❌ Error in command loop:', err)
     }
 }

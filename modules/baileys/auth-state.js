@@ -6,12 +6,14 @@ import { initAuthCreds, BufferJSON } from 'baileys'
 export class ImprovedAuthWithCache {
   constructor(baseDir = './auth') {
     this.baseDir = baseDir
-    this.credsPath = path.join(baseDir, 'creds.json')
-    this.keysDir = path.join(baseDir, 'keys')
+    this.credsPath = path.join(this.baseDir, 'creds.json')
+    this.keysDir = path.join(this.baseDir, 'keys')
     fs.mkdirSync(this.keysDir, { recursive: true })
-
     this.cache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
     this.creds = this.#loadJSON(this.credsPath) || initAuthCreds()
+  }
+  #sanitizeFileName(name) {
+    return name.replace(/[:<>"/\\|?*]/g, '_')
   }
 
   #loadJSON(file) {
@@ -20,30 +22,39 @@ export class ImprovedAuthWithCache {
         return JSON.parse(fs.readFileSync(file, 'utf-8'), BufferJSON.reviver)
       }
     } catch (e) {
-      console.error('⚠️ [Auth] Failed To Read', file, e)
+      console.error('⚠️ [Auth] Failed to read', file, e)
     }
     return null
   }
-
   #saveJSON(file, data) {
-    const tmp = file + '.tmp'
-    fs.writeFileSync(tmp, JSON.stringify(data, BufferJSON.replacer, 2))
-    fs.renameSync(tmp, file)
+    try {
+      const baseName = this.#sanitizeFileName(path.basename(file))
+      const dirName = path.dirname(file)
+      const safeDir = path.resolve(dirName)
+      const safeFile = path.join(safeDir, baseName)
+      const tmp = safeFile + '.tmp'
+
+      if (!fs.existsSync(safeDir)) fs.mkdirSync(safeDir, { recursive: true })
+      fs.writeFileSync(tmp, JSON.stringify(data, BufferJSON.replacer, 2))
+      fs.renameSync(tmp, safeFile)
+    } catch (err) {
+      console.error('❌ [Auth] Failed to save file:', file, err)
+    }
   }
-
   saveCreds = () => this.#saveJSON(this.credsPath, this.creds)
-
   keys = {
     get: async (type, ids) => {
       const result = {}
       for (const id of ids) {
         const key = `${type}-${id}`
-        let value = this.cache.get(key)
+        const safeKey = key.replace(/[:<>"/\\|?*]/g, '_')
+
+        let value = this.cache.get(safeKey)
         if (!value) {
-          const keyPath = path.join(this.keysDir, `${key}.json`)
+          const keyPath = path.join(this.keysDir, `${safeKey}.json`)
           if (fs.existsSync(keyPath)) {
             value = this.#loadJSON(keyPath)
-            this.cache.set(key, value)
+            this.cache.set(safeKey, value)
           }
         }
 
@@ -51,16 +62,17 @@ export class ImprovedAuthWithCache {
       }
       return result
     },
-
     set: async (data) => {
       for (const type in data) {
         for (const id in data[type]) {
           const key = `${type}-${id}`
-          const keyPath = path.join(this.keysDir, `${key}.json`)
+          const safeKey = key.replace(/[:<>"/\\|?*]/g, '_')
+          const keyPath = path.join(this.keysDir, `${safeKey}.json`)
           const value = data[type][id]
-          this.cache.set(key, value)
-          clearTimeout(this[`_save_${key}`])
-          this[`_save_${key}`] = setTimeout(() => {
+
+          this.cache.set(safeKey, value)
+          clearTimeout(this[`_save_${safeKey}`])
+          this[`_save_${safeKey}`] = setTimeout(() => {
             this.#saveJSON(keyPath, value)
           }, 300)
         }

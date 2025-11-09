@@ -16,10 +16,10 @@ export default class CommandFetch {
     }
 
     async init() {
-        await this.loadCommands()
+        await this.#loadCommands()
     }
 
-    async loadCommands(dirPath = commandsPath) {
+    async #loadCommands(dirPath = commandsPath) {
         const files = fs.readdirSync(dirPath)
         for (const file of files) {
             const fullPath = path.join(dirPath, file)
@@ -37,13 +37,14 @@ export default class CommandFetch {
     }
 
     async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, rawMessage }) {
+        console.log("message text : ", messagetext)
         const command = messagetext.split(" ")[0]
         const args = messagetext.split(" ").slice(1)
         if (!this.commandData.has(command)) return null
-        this.saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, rawMessage })
+        this.#saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, rawMessage })
     }
 
-    async saveCommandToDatabase(commands) {
+    async #saveCommandToDatabase(commands) {
         const newCommand = {
             commandID: Date.now(),
             lid: commands.lid,
@@ -74,7 +75,7 @@ export default class CommandFetch {
         }
         fs.writeFileSync(databasePath, JSON.stringify(dbCommands, null, 2))
     }
-    async updateCommandStatus(commandID, status) {
+    async #updateCommandStatus(commandID, status) {
         const rawData = fs.readFileSync(databasePath)
         const dbCommands = JSON.parse(rawData)
         let found = false
@@ -93,7 +94,7 @@ export default class CommandFetch {
         fs.writeFileSync(databasePath, JSON.stringify(dbCommands, null, 2))
     }
 
-    async checkCommand() {
+    async #checkCommand() {
         if (!fs.existsSync(databasePath)) return
 
         const rawData = fs.readFileSync(databasePath)
@@ -133,7 +134,7 @@ export default class CommandFetch {
 
 
     async executeCommand() {
-        await this.checkCommand()
+        await this.#checkCommand()
 
         while (this.commandQueue.length > 0) {
             const commandID = this.commandQueue.shift()
@@ -141,20 +142,25 @@ export default class CommandFetch {
             const dbCommands = JSON.parse(rawData)
             const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
             const commandToExecute = entry?.commands.find(cmd => cmd.commandID === commandID)
+            let output = {
+                text: null,
+                outputType: null,
+                mediaURL: null,
+            }
             if (!commandToExecute) continue
 
             const commandData = this.commandData.get(commandToExecute.name)
             if (commandData) {
                 try {
-                    const output = await commandData.execute(commandToExecute, this.commandData)
+                    output = await commandData.execute(commandToExecute, this.commandData)
                     if (await botConfigs.getConfig('debugCommand') == true) console.log(commandToExecute)
                     if (output) {
-                        await this.updateCommandStatus(commandToExecute.commandID, 'completed')
+                        await this.#updateCommandStatus(commandToExecute.commandID, 'completed')
                         return { info: commandToExecute, output }
-                    }
+                    } 
                 } catch (err) {
-                    console.error('Error executing command:', err)
-                    await this.updateCommandStatus(commandToExecute.commandID, 'failed')
+                    console.error('❌ Error executing command:', err)
+                    await this.#updateCommandStatus(commandToExecute.commandID, 'failed')
                     return { info: commandToExecute, output: { text: '❌ Error executing command.', outputType: 'text' } }
                 }
             }

@@ -32,7 +32,7 @@ class ConnectionControl {
                 try {
                     await fs.promises.rm(authPath, { recursive: true, force: true })
                     console.log('✅ Auth deleted. Please rescan QR.')
-                    if (await botConfigs.getConfig('usePM2') == false) await this.askToReconnect('Scan QR Again? [y/n]')
+                    if (await botConfigs.getConfig('usePM2') == false) await this.#askToReconnect('Scan QR Again? [y/n]')
                     else setTimeout(() => this.socket.restartSocket(), this.reconnectDelay)
                 } catch (err) {
                     console.error('❌ Failed to delete auth:', err)
@@ -57,7 +57,7 @@ class ConnectionControl {
         }
     }
 
-    async askToReconnect(question = '') {
+    async #askToReconnect(question = '') {
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout,

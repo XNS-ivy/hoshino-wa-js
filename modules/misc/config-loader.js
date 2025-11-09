@@ -19,16 +19,16 @@ export class BotConfigs extends Configs {
     }
 
     async init() {
-        await this.loadDefaultConfigs()
-        await this.loadCustomConfigs()
+        await this.#loadDefaultConfigs()
+        await this.#loadCustomConfigs()
     }
 
-    async loadDefaultConfigs() {
+    async #loadDefaultConfigs() {
         this.configs.set("prefix", ".")
         this.configs.set("owners", [])
     }
 
-    async loadCustomConfigs() {
+    async #loadCustomConfigs() {
         if (!fs.existsSync(botConfigPath)) return
         const json = JSON.parse(fs.readFileSync(botConfigPath, "utf8"))
         for (const [key, val] of Object.entries(json)) {
