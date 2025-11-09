@@ -37,7 +37,6 @@ export default class CommandFetch {
     }
 
     async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, rawMessage }) {
-        console.log("message text : ", messagetext)
         const command = messagetext.split(" ")[0]
         const args = messagetext.split(" ").slice(1)
         if (!this.commandData.has(command)) return null

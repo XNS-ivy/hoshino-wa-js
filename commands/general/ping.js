@@ -8,7 +8,6 @@ export default {
   execute: async ({ args, commandID }) => {
     const target = args[0] ? args[0].replace(/^https?:\/\//, '') : 'google.com'
     const host = target.includes('.') ? target : `${target}.com`
-    console.log(`args: ${args} target: ${target} host: ${host}`)
     const now = Date.now()
     const latency = now - commandID
     const roundedLatency = parseFloat(latency.toFixed(2))
