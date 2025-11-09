@@ -14,14 +14,14 @@ class ConnectionControl {
 
     async onConnectionUpdate(connection) {
         if (!connection) return
-        console.log('Connection update : ', connection)
+        console.log('🔔 Connection update : ', connection)
     }
 
     async onConnectionClose(lastDisconnect, authPath) {
         if (!lastDisconnect) return
 
         const code = lastDisconnect.error?.statusCode || lastDisconnect.error?.output?.statusCode
-        console.log(`Connection closed with code ${code}`)
+        console.log(`⚠️ Connection closed with code ${code}`)
 
         switch (code) {
             case DisconnectReason.loggedOut:

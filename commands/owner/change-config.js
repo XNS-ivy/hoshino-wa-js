@@ -9,7 +9,7 @@ export default {
     execute: async ({ args, pushName, keyQuoted }) => {
         const lid = getLID(keyQuoted.key)
         if (!args || args.length === 0) {
-            return { text: 'Please provide a new prefix.', outputType: 'text' }
+            return { text: '🚨 Please provide a new prefix.', outputType: 'text' }
         }
         const owner = await botConfigs.getOwnerByLid(lid)
         if (!owner) {

@@ -155,7 +155,7 @@ export default class CommandFetch {
                 } catch (err) {
                     console.error('Error executing command:', err)
                     await this.updateCommandStatus(commandToExecute.commandID, 'failed')
-                    return { info: commandToExecute, output: { text: 'Error executing command.', outputType: 'text' } }
+                    return { info: commandToExecute, output: { text: '❌ Error executing command.', outputType: 'text' } }
                 }
             }
         }

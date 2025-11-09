@@ -10,6 +10,6 @@ export default {
                     (Date.now() - commandID - 1000) > 0 ? (Date.now() - commandID - 1000) :
                         (Date.now() - commandID)
         const roundedLatency = parseFloat(latency.toFixed(2))
-        return { text: `Pong! Command Latency is ${roundedLatency}ms.`, outputType: 'text' }
+        return { text: `✅ Pong! Command Latency is ${roundedLatency}ms.`, outputType: 'text' }
     }
 }

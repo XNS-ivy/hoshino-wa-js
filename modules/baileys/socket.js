@@ -69,7 +69,7 @@ export default class Socket {
                 }
 
             } catch (err) {
-                console.error('Error handling connection update:', err)
+                console.error('❌ Error handling connection update:', err)
             }
         })
 
@@ -93,7 +93,7 @@ export default class Socket {
                 const metadata = await this.sock.groupMetadata(event.id)
                 this.groupCache.set(event.id, metadata)
             } catch (e) {
-                console.error('Error updating group cache:', e)
+                console.error('❌ Error updating group cache:', e)
             }
         })
         this.sock.ev.on('group-participants.update', async (event) => {
@@ -101,7 +101,7 @@ export default class Socket {
                 const metadata = await this.sock.groupMetadata(event.id)
                 this.groupCache.set(event.id, metadata)
             } catch (e) {
-                console.error('Error updating participant cache:', e)
+                console.error('❌ Error updating participant cache:', e)
             }
         })
     }
@@ -111,7 +111,7 @@ export default class Socket {
             console.log('🔄 Restarting socket...')
             await this.init()
         } catch (err) {
-            console.error('Restart failed:', err)
+            console.error('❌ Restart failed:', err)
         }
     }
     async startCommandLoop() {
@@ -130,9 +130,9 @@ export default class Socket {
                 await new Promise(r => setTimeout(r, 5000))
             }
         } catch (err) {
-            console.error('Error in command loop:', err)
+            console.error('❌ Error in command loop:', err)
         }
     } catch(err) {
-        console.error('Error in command loop:', err)
+        console.error('❌ Error in command loop:', err)
     }
 }

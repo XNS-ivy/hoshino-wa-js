@@ -21,7 +21,7 @@ export class SingleFileAuth {
         return JSON.parse(raw, BufferJSON.reviver)
       }
     } catch (err) {
-      console.error('[Auth] Failed to load creds.json:', err)
+      console.error('❌ [Auth] Failed to load creds.json:', err)
     }
     return {}
   }
@@ -32,7 +32,7 @@ export class SingleFileAuth {
         JSON.stringify({ creds: this.creds, keys: this.keysStore }, BufferJSON.replacer, 2)
       )
     } catch (err) {
-      console.error('[Auth] Failed to save creds.json:', err)
+      console.error('❌ [Auth] Failed to save creds.json:', err)
     }
   }
   get keys() {

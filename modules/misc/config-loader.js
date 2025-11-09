@@ -68,7 +68,7 @@ export class BotConfigs extends Configs {
     async changeConfigToDatabase(key, val) {
         await this.ready
         if (!this.configs.has(key) && key !== 'owners') {
-            throw new Error(`Unknown config key: ${key}`)
+            throw new Error(`📢 Unknown config key: ${key}`)
         }
         if (key === 'owners') {
             const currentOwners = this.configs.get('owners') || []
