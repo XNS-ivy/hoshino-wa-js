@@ -27,7 +27,7 @@ export default class MessageHandler {
         const text = (
             first?.text ||
             first?.caption ||
-            res?.conversation
+            res?.conversation || ''
         ).toLowerCase() || null
 
         const { contextInfo } = res[object[0]] || {}
