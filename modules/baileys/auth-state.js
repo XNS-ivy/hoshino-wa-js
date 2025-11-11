@@ -9,8 +9,9 @@ export class ImprovedAuthWithCache {
     this.credsPath = path.join(this.baseDir, 'creds.json')
     this.keysDir = path.join(this.baseDir, 'keys')
     fs.mkdirSync(this.keysDir, { recursive: true })
-    this.cache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
+    this.cache = new NodeCache({ stdTTL: 1800, checkperiod: 600 })
     this.creds = this.#loadJSON(this.credsPath) || initAuthCreds()
+    this.#cleanupOnExit()
   }
   #sanitizeFileName(name) {
     return name.replace(/[:<>"/\\|?*]/g, '_')
@@ -82,5 +83,11 @@ export class ImprovedAuthWithCache {
 
   get state() {
     return { creds: this.creds, keys: this.keys }
+  }
+  #cleanupOnExit() {
+    const cleanup = () => this.cache.flushAll()
+    process.on('exit', cleanup)
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
   }
 }

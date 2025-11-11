@@ -31,6 +31,7 @@ export default class Socket {
         await this.commandFetch.init()
         await this.#socketEvent()
         this.#startCommandLoop()
+        this.#cleanupOnExit()
     }
 
     async #socketConfig() {
@@ -131,4 +132,10 @@ export default class Socket {
             console.error('❌ Error in command loop')
         }
     }
+    #cleanupOnExit() {
+    const cleanup = () => this.groupCache.flushAll()
+    process.on('exit', cleanup)
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
+  }
 }
