@@ -25,9 +25,9 @@ export default class MessageHandler {
         const object = Object.keys(res)
         const first = res[object[0]]
         const text =
-            first?.text ??
-            first?.caption ??
-            res.conversation ??
+            first?.text.toLowerCase() ??
+            first?.caption.toLowerCase() ??
+            res.conversation.toLowerCase() ??
             null
 
         const { contextInfo } = res[object[0]] || {}

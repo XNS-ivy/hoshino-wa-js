@@ -7,6 +7,7 @@ import CommandFetch from '@misc/command-fetch'
 import { botConfigs } from "@misc/config-loader"
 import NodeCache from "node-cache"
 import { createFilteredLogger } from './functions/filter-logger'
+import fs from 'fs'
 
 export default class Socket {
     constructor() {
@@ -26,6 +27,7 @@ export default class Socket {
         this.saveCreds = saveCreds
         this.ConnectionControl = new ConnectionControl(this)
         this.botConfigs = botConfigs
+        this.prefix = await botConfigs.getConfig('prefix')
         this.messageHandler = new MessageHandler(sock)
         this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
@@ -43,7 +45,8 @@ export default class Socket {
             logger: filteredLogger,
             printQRInTerminal: false,
             markOnlineOnConnect: false,
-            cachedGroupMetadata: async (jid) => this.groupCache.get(jid)
+            cachedGroupMetadata: async (jid) => this.groupCache.get(jid),
+            generateHighQualityLinkPreview: true,
         })
         return { sock, saveCreds }
     }
@@ -80,10 +83,23 @@ export default class Socket {
             for (const msg of messages) {
                 if (!msg.pushName || msg.key.remoteJid === 'status@broadcast') continue
                 const parsed = await this.messageHandler.messageFetch(msg)
+                const prefix = this.prefix
                 if (!parsed) continue
-                const prefix = await botConfigs.getConfig('prefix')
-                if (!parsed.text.startsWith(prefix)) continue
-                this.commandFetch.fetchCommand(parsed.text.slice(prefix.length).trim(), parsed)
+                switch (true) {
+                    case parsed.text.startsWith(prefix):
+                        this.commandFetch.fetchCommand(parsed.text.slice(prefix.length).trim(), parsed)
+                        break
+                    case parsed.text.startsWith('hoshino'):
+                    case parsed.text.startsWith('hoshino bot'):
+                        const text = `Hi _${parsed.pushName}_\nTo Use Bot Feature Type "_${prefix}menu_"\n\nLove you from _Ojiisan_`
+                        const stikerPath = 'src/static/image/wave.webp'
+                        const sticker = fs.readFileSync(stikerPath)
+                        await this.sock.sendMessage(parsed.remoteJid, { text: text }, { quoted: parsed.rawMessage, ephemeralExpiration: parsed.expiration })
+                        await this.sock.sendMessage(parsed.remoteJid, { sticker: sticker }, { quoted: parsed.rawMessage, ephemeralExpiration: parsed.expiration })
+                        break
+                    default:
+                        break
+                }
             }
         })
 
@@ -133,9 +149,9 @@ export default class Socket {
         }
     }
     #cleanupOnExit() {
-    const cleanup = () => this.groupCache.flushAll()
-    process.on('exit', cleanup)
-    process.on('SIGINT', cleanup)
-    process.on('SIGTERM', cleanup)
-  }
+        const cleanup = () => this.groupCache.flushAll()
+        process.on('exit', cleanup)
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+    }
 }
