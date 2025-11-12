@@ -16,7 +16,8 @@ export default class Socket {
         this.ConnectionControl = null
         this.messageHandler = null
         this.authFolderName = null
-        this.setlocalowner = null
+        this.commandLoopRunning = false
+        this.groupCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 60, useClones: false })
     }
 
     async init(authenticationFolderName = 'auth') {
@@ -39,7 +40,6 @@ export default class Socket {
     async #socketConfig() {
         const { state, saveCreds } = this.auth
         const filteredLogger = createFilteredLogger('silent')
-        this.groupCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 60, useClones: false })
         const sock = makeWASocket({
             auth: state,
             logger: filteredLogger,
@@ -52,7 +52,15 @@ export default class Socket {
     }
 
     async #socketEvent() {
+        if (this.sock) {
+            this.sock.ev.removeAllListeners('messages.upsert')
+            this.sock.ev.removeAllListeners('connection.update')
+            this.sock.ev.removeAllListeners('groups.update')
+            this.sock.ev.removeAllListeners('group-participants.update')
+        }
+
         this.sock.ev.on('creds.update', this.saveCreds)
+
         this.sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
             try {
                 if (qr) console.log(await QRCode.toString(qr, { type: 'terminal', small: true, scale: 1 }))
@@ -83,8 +91,8 @@ export default class Socket {
             for (const msg of messages) {
                 if (!msg.pushName || msg.key.remoteJid === 'status@broadcast') continue
                 const parsed = await this.messageHandler.messageFetch(msg)
-                const prefix = this.prefix
                 if (!parsed) continue
+                const prefix = this.prefix
                 switch (true) {
                     case parsed.text.startsWith(prefix):
                         this.commandFetch.fetchCommand(parsed.text.slice(prefix.length).trim(), parsed)
@@ -111,6 +119,7 @@ export default class Socket {
                 console.error('❌ Error updating group cache:', e)
             }
         })
+
         this.sock.ev.on('group-participants.update', async (event) => {
             try {
                 const metadata = await this.sock.groupMetadata(event.id)
@@ -124,30 +133,36 @@ export default class Socket {
     async restartSocket() {
         try {
             console.log('🔄 Restarting socket...')
-            await this.init()
+            this.commandLoopRunning = false
+            await new Promise(r => setTimeout(r, 500))
+            await this.init(this.authFolderName)
         } catch (err) {
             console.error('❌ Restart failed:', err)
         }
     }
+
     async #startCommandLoop() {
+        if (this.commandLoopRunning) return
+        this.commandLoopRunning = true
         try {
-            while (true) {
+            while (this.commandLoopRunning) {
                 const result = await this.commandFetch.executeCommand()
                 if (result) {
                     const { info, output } = result
-                    const { outputType, text, mediaURL } = output
+                    const { outputType, text } = output
                     const { remoteJid, replyExpiration, keyQuoted } = info
                     if (outputType === 'text') {
-                        await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
+                        await this.sock.sendMessage(remoteJid, { text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
                         continue
                     }
                 }
                 await new Promise(r => setTimeout(r, 5000))
             }
         } catch (error) {
-            console.error('❌ Error in command loop')
+            console.error('❌ Error in command loop', error)
         }
     }
+
     #cleanupOnExit() {
         const cleanup = () => this.groupCache.flushAll()
         process.on('exit', cleanup)
