@@ -1,43 +1,67 @@
-import { botConfigs } from "@misc/config-loader"
+import { botConfigs } from '@misc/config-loader'
 
 export default {
-    name: "help",
-    desc: "Displays usage and details for a specific command.",
-    access: "all",
-    usage: ["help", "help <command>"],
+    name: 'help',
+    desc: 'Provides a list of available commands or details for a specific one.',
+    access: 'all',
+    usage: ['help <comman-name>'],
 
-    execute: async ({ args }, commands) => {
+    async execute({ args }, commandData) {
         const prefix = await botConfigs.getConfig('prefix')
+        const accessOrder = ['owner', 'admin', 'premium', 'all']
 
-        if (args.length > 0) {
-            const commandName = args[0].toLowerCase()
-            const command = [...commands.values()].find(cmd => cmd.name === commandName)
+        if (args && args.length > 0) {
+            const cmdName = args[0].toLowerCase()
+            const cmd = Array.from(commandData.values()).find(
+                c => c.name.toLowerCase() === cmdName
+            )
 
-            if (!command) {
+            if (!cmd) {
                 return {
-                    text: `❌ Command *${commandName}* was not found.`,
-                    outputType: 'text'
+                    text: `❌ Command *${cmdName}* not found.`,
+                    outputType: 'text',
                 }
             }
 
-            const usageText = Array.isArray(command.usage)
-                ? command.usage.map(u => `• ${prefix}${u}`).join('\n')
-                : `• ${prefix}${command.usage}`
+            const detail = [
+                `📘 *Command:* ${prefix}${cmd.name}`,
+                `🧾 *Description:* ${cmd.desc || 'No description'}`,
+                `🔑 *Access:* ${cmd.access || 'all'}`,
+                cmd.args && cmd.args.length
+                    ? `🎯 *Available Args:* ${cmd.args.join(', ')}`
+                    : '',
+                cmd.usage && cmd.usage.length
+                    ? `💡 *Usage:* ${cmd.usage.map(u => `${prefix}${u}`).join('\n')}`
+                    : ''
+            ]
+                .filter(Boolean)
+                .join('\n')
 
-            const info = `📘 *Help: ${command.name}*\n\n`
-                + `📝 Description: ${command.desc || 'No description provided.'}\n`
-                + `🔧 Access: ${command.access || 'all'}\n`
-                + `📚 Usage:\n${usageText}`
-
-            return {
-                text: info,
-                outputType: 'text'
-            }
-        } else {
-            return {
-                text: `ℹ️ Use *${prefix}help <command>* to view details of a command.\n\nExamples:\n• ${prefix}help menu\n• ${prefix}help ping`,
-                outputType: 'text'
-            }
+            return { text: detail, outputType: 'text' }
         }
+        const grouped = {}
+        for (const cmd of commandData.values()) {
+            const acc = cmd.access?.toLowerCase() || 'all'
+            if (acc === 'owner') continue
+            if (!grouped[acc]) grouped[acc] = []
+            grouped[acc].push(cmd)
+        }
+
+        const sections = accessOrder
+            .filter(acc => grouped[acc])
+            .map(acc => {
+                const list = grouped[acc]
+                    .map(c => `• ${prefix}${c.name} — ${c.desc || 'No description'}`)
+                    .join('\n')
+                const emoji =
+                    acc === 'owner' ? '👑' :
+                        acc === 'admin' ? '⚙️' :
+                            acc === 'premium' ? '💎' : '🌐'
+                return `${emoji} *${acc.toUpperCase()} Commands:*\n${list}`
+            })
+
+        const text = `📜 *Command Help*\n\n${sections.join('\n\n')}`
+
+        return { text, outputType: 'text' }
     }
 }

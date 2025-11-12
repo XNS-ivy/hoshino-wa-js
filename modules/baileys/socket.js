@@ -149,11 +149,13 @@ export default class Socket {
                 const result = await this.commandFetch.executeCommand()
                 if (result) {
                     const { info, output } = result
-                    const { outputType, text } = output
+                    const { outputType, text, mediaURL } = output
                     const { remoteJid, replyExpiration, keyQuoted } = info
                     if (outputType === 'text') {
-                        await this.sock.sendMessage(remoteJid, { text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
+                        await this.sock.sendMessage(remoteJid, { text: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
                         continue
+                    } if (outputType === 'imageURL') {
+                        await this.sock.sendMessage(remoteJid, { image: { url: mediaURL }, caption: text }, { quoted: keyQuoted, ephemeralExpiration: replyExpiration })
                     }
                 }
                 await new Promise(r => setTimeout(r, 5000))
