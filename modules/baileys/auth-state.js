@@ -9,7 +9,7 @@ export class ImprovedAuthWithCache {
     this.credsPath = path.join(this.baseDir, 'creds.json')
     this.keysDir = path.join(this.baseDir, 'keys')
     fs.mkdirSync(this.keysDir, { recursive: true })
-    this.cache = new NodeCache({ stdTTL: 1800, checkperiod: 600 })
+    this.cache = new NodeCache({ stdTTL: 1800, checkperiod: 600, useClones: false })
     this.creds = this.#loadJSON(this.credsPath) || initAuthCreds()
     this.#cleanupOnExit()
   }

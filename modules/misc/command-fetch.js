@@ -13,6 +13,7 @@ export default class CommandFetch {
         this.commands = new Map()
         this.commandData = new Map()
         this.commandQueue = []
+        this.executing = new Set()
     }
 
     async init() {
@@ -137,31 +138,32 @@ export default class CommandFetch {
 
         while (this.commandQueue.length > 0) {
             const commandID = this.commandQueue.shift()
-            const rawData = fs.readFileSync(databasePath)
-            const dbCommands = JSON.parse(rawData)
-            const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
-            const commandToExecute = entry?.commands.find(cmd => cmd.commandID === commandID)
-            let output = {
-                text: null,
-                outputType: null,
-                mediaURL: null,
-            }
-            if (!commandToExecute) continue
+            if (this.executing.has(commandID)) continue
 
-            const commandData = this.commandData.get(commandToExecute.name)
-            if (commandData) {
-                try {
-                    output = await commandData.execute(commandToExecute, this.commandData)
+            this.executing.add(commandID)
+            try {
+                const rawData = fs.readFileSync(databasePath)
+                const dbCommands = JSON.parse(rawData)
+                const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
+                const commandToExecute = entry?.commands.find(cmd => cmd.commandID === commandID)
+                if (!commandToExecute) continue
+
+                const commandData = this.commandData.get(commandToExecute.name)
+                if (commandData) {
+                    const output = await commandData.execute(commandToExecute, this.commandData)
                     if (await botConfigs.getConfig('debugCommand') == true) console.log(commandToExecute)
+
                     if (output) {
                         await this.#updateCommandStatus(commandToExecute.commandID, 'completed')
+                        this.executing.delete(commandID)
                         return { info: commandToExecute, output }
-                    } 
-                } catch (err) {
-                    console.error('❌ Error executing command:', err)
-                    await this.#updateCommandStatus(commandToExecute.commandID, 'failed')
-                    return { info: commandToExecute, output: { text: '❌ Error executing command.', outputType: 'text' } }
+                    }
                 }
+            } catch (err) {
+                console.error('❌ Error executing command:', err)
+                await this.#updateCommandStatus(commandID, 'failed')
+            } finally {
+                this.executing.delete(commandID)
             }
         }
     }
