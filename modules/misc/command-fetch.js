@@ -37,11 +37,11 @@ export default class CommandFetch {
         }
     }
 
-    async fetchCommand(messagetext, { remoteJid, pushName, lid, expiration, rawMessage }) {
+    async fetchCommand(messagetext, { remoteJid, pushName, lid, isGroup, expiration, rawMessage }) {
         const command = messagetext.split(" ")[0]
         const args = messagetext.split(" ").slice(1)
         if (!this.commandData.has(command)) return null
-        this.#saveCommandToDatabase({ lid, command, args, remoteJid, pushName, expiration, rawMessage })
+        this.#saveCommandToDatabase({ lid, command, args, remoteJid, isGroup, pushName, expiration, rawMessage })
     }
 
     async #saveCommandToDatabase(commands) {
@@ -49,6 +49,7 @@ export default class CommandFetch {
             commandID: Date.now(),
             lid: commands.lid,
             remoteJid: commands.remoteJid,
+            isGroup: commands.isGroup,
             replyExpiration: commands.expiration,
             pushName: commands.pushName,
             name: commands.command,
@@ -142,6 +143,12 @@ export default class CommandFetch {
 
             this.executing.add(commandID)
             try {
+                let rawOutput = null
+                let output = {
+                    text: '',
+                    outputType: '',
+                    mediaUrl: '',
+                }
                 const rawData = fs.readFileSync(databasePath)
                 const dbCommands = JSON.parse(rawData)
                 const entry = dbCommands.find(e => e.commands.some(cmd => cmd.commandID === commandID))
@@ -150,13 +157,17 @@ export default class CommandFetch {
 
                 const commandData = this.commandData.get(commandToExecute.name)
                 if (commandData) {
-                    const output = await commandData.execute(commandToExecute, this.commandData)
+                    rawOutput = await commandData.execute(commandToExecute, this.commandData)
                     if (await botConfigs.getConfig('debugCommand') == true) console.log(commandToExecute)
 
-                    if (output) {
+                    if (rawOutput !== null && rawOutput !== undefined) {
+                        output = rawOutput
                         await this.#updateCommandStatus(commandToExecute.commandID, 'completed')
                         this.executing.delete(commandID)
                         return { info: commandToExecute, output }
+                    } else {
+                        await this.#updateCommandStatus(commandToExecute.commandID, 'failed')
+                        this.executing.delete(commandID)
                     }
                 }
             } catch (err) {

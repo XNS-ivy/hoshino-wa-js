@@ -1,13 +1,11 @@
 import { botConfigs } from "@misc/config-loader"
-import { getLID } from "@baileys/functions/get-lid"
 
 export default {
     name: 'prefix-change',
     desc: 'Change the bot prefix (owner only).',
     access: 'owner',
     usage: 'prefix-change <your-prefix>',
-    execute: async ({ args, pushName, keyQuoted }) => {
-        const lid = getLID(keyQuoted.key)
+    execute: async ({ args, pushName, lid }) => {
         if (!args || args.length === 0) {
             return { text: '🚨 Please provide a new prefix.', outputType: 'text' }
         }

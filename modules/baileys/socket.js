@@ -28,7 +28,7 @@ export default class Socket {
         this.saveCreds = saveCreds
         this.ConnectionControl = new ConnectionControl(this)
         this.botConfigs = botConfigs
-        this.prefix = await botConfigs.getConfig('prefix')
+        this.prefix = new String
         this.messageHandler = new MessageHandler(sock)
         this.commandFetch = new CommandFetch()
         await this.commandFetch.init()
@@ -92,7 +92,7 @@ export default class Socket {
                 if (!msg.pushName || msg.key.remoteJid === 'status@broadcast') continue
                 const parsed = await this.messageHandler.messageFetch(msg)
                 if (!parsed) continue
-                const prefix = this.prefix
+                const prefix = await botConfigs.getConfig('prefix')
                 switch (true) {
                     case parsed.text.startsWith(prefix):
                         this.commandFetch.fetchCommand(parsed.text.slice(prefix.length).trim(), parsed)

@@ -1,4 +1,5 @@
 import { botConfigs } from "@misc/config-loader"
+import { getLID } from "./functions/get-lid"
 
 export default class MessageHandler {
     static denied = [
@@ -13,6 +14,7 @@ export default class MessageHandler {
     async messageFetch(rawMessage) {
         if (!rawMessage.message) return null
         const { remoteJid } = rawMessage.key
+        const isGroup = rawMessage.key.remoteJid.endsWith('@g.us') ? true : false
         const { pushName, message, key } = rawMessage
         if (await botConfigs.getConfig('debugMessage') === true) console.log(`💬 got new message : ${JSON.stringify(message)}\nfrom : ${pushName}`)
         const res = Object.keys(message)
@@ -32,12 +34,13 @@ export default class MessageHandler {
 
         const { contextInfo } = res[object[0]] || {}
         const { expiration } = contextInfo || {}
-        const lid = key?.remoteJidAlt?.endsWith('@lid') ? Number(key.remoteJidAlt.split('@')[0]) : key?.participant?.endsWith('@lid') ? Number(key.participant.split('@')[0]) : null
+        const lid = getLID(key)
         if (!text) return null
         if (await botConfigs.getConfig('debugMessage') === true) console.log(`💬 got new message after fetch : ${text}\nfrom : ${pushName}`)
         return {
             remoteJid,
             lid,
+            isGroup,
             pushName,
             text,
             key,
