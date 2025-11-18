@@ -5,7 +5,7 @@ import { loadPremium } from "@misc/premium-loader"
 export default {
     name: 'delete-prem',
     access: 'owner',
-    desc: 'delete premium to user on group (owner only)',
+    desc: 'Delete premium to user on group (owner only)',
     usage: `delete-prem <tag-member-1> <tag-member-N>`,
     async execute({ isGroup, lid, args }) {
         const owners = await botConfigs.getOwnerByLid(lid)
