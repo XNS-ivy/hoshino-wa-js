@@ -11,3 +11,16 @@ export function parsePremiumArray(arr) {
 
     return { ids, days }
 }
+
+export function parseDeletePremiumArray(arr = []) {
+    if (!Array.isArray(arr)) return { ids: [] }
+    const ids = [...new Set(
+        arr
+            .map(x => String(x).trim())
+            .map(x => x.replace(/@/g, ""))
+            .filter(x => /^\d+$/.test(x))
+            .filter(x => x.length >= 5)
+    )]
+
+    return { ids }
+}

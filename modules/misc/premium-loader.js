@@ -72,8 +72,7 @@ export class PremiumUser {
 
 
     async execute(lid = [], action = 'save', days = null) {
-
-        console.log({lid, action, days})
+        console.log({lid, action})
         if (Array.isArray(lid)) {
 
             const ids = [...new Set(
