@@ -71,36 +71,28 @@ export class PremiumUser {
     }
 
 
-    async execute(lid = [], action = 'save', days = null) {
-        console.log({lid, action})
-        if (Array.isArray(lid)) {
-
-            const ids = [...new Set(
-                lid
-                    .map(x => x.replace(/@/g, ""))
-                    .filter(x => /^\d+$/.test(x))
-            )]
-
-            this.days = days
-            this.action = action
-
-            const results = []
-
-            for (const id of ids) {
-                this.userid = id
-
-                if (action === "save") results.push(await this.#saveUser())
-                if (action === "check") results.push(await this.#checkUser())
-                if (action === "update") results.push(await this.#updateUser())
-                if (action === "delete") results.push(await this.#deleteUser())
-            }
-
-            return results
-        }
-        this.userid = lid
+    async execute(lid, action = 'save', days = null) {
+        const ids = Array.isArray(lid) ? lid : [lid]
+        const cleanIds = [...new Set(
+            ids
+                .map(x => String(x).replace(/@/g, ""))
+                .filter(x => /^\d+$/.test(x))
+        )]
         this.days = days
         this.action = action
+        const results = []
+        for (const id of cleanIds) {
+            this.userid = id
+
+            if (action === "save") results.push(await this.#saveUser())
+            if (action === "check") results.push(await this.#checkUser())
+            if (action === "update") results.push(await this.#updateUser())
+            if (action === "delete") results.push(await this.#deleteUser())
+        }
+
+        return results
     }
+
 
 
     async premium() {

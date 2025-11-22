@@ -9,17 +9,22 @@ export default {
     usage: `add-prem <tag-member-1> <tag-member-N> <days>`,
     async execute({ isGroup, lid, args }) {
         const owners = await botConfigs.getOwnerByLid(lid)
-        if (isGroup == false) {
-            return { text: 'Adding Premium Member Must Be On Group!', outputType: 'text' }
-        } if (!owners) {
+        if (!isGroup) {
+            return { text: '❌ Adding Premium Member Must Be On Group!', outputType: 'text' }
+        }
+        if (!owners) {
             return { text: '❌ Sorry, you are not registered as an owner.', outputType: 'text' }
         }
-        if (owners && isGroup == true) {
-            const { ids, days } = parsePremiumArray(args)
-            const result = await loadPremium.execute(ids, 'save', days)
-            for (const out of result) {
-                return { text: `ℹ️ ${out.msg}.`, outputType: 'text' }
-            }
+        const parsed = parsePremiumArray(args)
+        const { ids, days, error } = parsed
+        if (error) {
+            return { text: `❌ ${error}`, outputType: "text" }
+        }
+        const result = await loadPremium.execute(ids, 'save', days)
+        const msgs = result.map(r => `• ${r.msg}`).join('\n')
+        return { 
+            text: `ℹ️ Result:\n${msgs}`, 
+            outputType: 'text' 
         }
     }
 }

@@ -1,4 +1,4 @@
-import { makeWASocket } from "baileys"
+import { makeWASocket, Browsers } from "baileys"
 import { ImprovedAuthWithCache } from "./auth-state"
 import QRCode from 'qrcode'
 import ConnectionControl from "@baileys/connection-control"
@@ -47,6 +47,9 @@ export default class Socket {
             markOnlineOnConnect: false,
             cachedGroupMetadata: async (jid) => this.groupCache.get(jid),
             generateHighQualityLinkPreview: true,
+            qrTimeout: 30000, // set qr time out
+            browser: Browsers.appropriate('Google Chrome'), // settings browsers
+            emitOwnEvents: false,
         })
         return { sock, saveCreds }
     }
@@ -63,7 +66,7 @@ export default class Socket {
 
         this.sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
             try {
-                if (qr) console.log(await QRCode.toString(qr, { type: 'terminal', small: true, scale: 1 }))
+                if (qr) console.log('\n', await QRCode.toString(qr, { type: 'terminal', small: true, scale: 1 }), '\n')
                 this.ConnectionControl.onConnectionUpdate(connection)
 
                 if (connection === 'close') {

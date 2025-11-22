@@ -11,7 +11,6 @@ export default {
         'wink', 'poke', 'dance', 'cringe'
     ],
     usage: ['waifu-pict <type>'],
-
     async execute({ args }) {
         const available = this.args
         const input = args?.[0]?.toLowerCase()
