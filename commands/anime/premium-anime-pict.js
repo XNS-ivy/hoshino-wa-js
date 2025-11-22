@@ -4,7 +4,7 @@ import { loadPremium } from '@misc/premium-loader'
 export default {
     name: 'waifu-nsfw',
     desc: 'Send a random anime image (NSFW & Premium / Owner Only)',
-    access: 'all',
+    access: 'premium',
     args: ['waifu', 'neko', 'trap', 'blowjob'],
     usage: ['waifu-nsfw <type>'],
     async execute({ lid, args }) {
